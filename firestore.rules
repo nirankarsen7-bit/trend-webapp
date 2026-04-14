@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: user UID
+    // Fields:
+    //   - phone: string
+    //   - isAdmin: boolean
+    //   - trialUsed: boolean
+    //   - subscriptionActive: boolean
+    //   - expiryDate: string (optional)
+    //
+    // Collection: guides
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string
+    //   - content: string
+    //   - imageUrl: string (optional)
+    //
+    // Collection: protocols
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string
+    //   - content: string
+    //   - imageUrl: string (optional)
+    //
+    // Collection: settings
+    // Document ID: admin
+    // Fields:
+    //   - subscriptionPrice: number
+    //   - trialDays: number
+    //   - isTrialEnabled: boolean
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "nirankarsen7@gmail.com" || 
+        request.auth.token.email == "homestaymart@gmail.com" || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true)
+      );
+    }
+
+    // Validation Functions
+    function isValidUser(data) {
+      return data.keys().hasAll(['isAdmin', 'trialUsed', 'subscriptionActive']) &&
+             data.isAdmin is bool &&
+             data.trialUsed is bool &&
+             data.subscriptionActive is bool;
+    }
+
+    function isValidGuide(data) {
+      return data.keys().hasAll(['title', 'content']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 1000));
+    }
+
+    function isValidProtocol(data) {
+      return data.keys().hasAll(['title', 'content']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 1000));
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['subscriptionPrice', 'trialDays', 'isTrialEnabled']) &&
+             data.subscriptionPrice is number && data.subscriptionPrice >= 0 &&
+             data.trialDays is number && data.trialDays >= 0 &&
+             data.isTrialEnabled is bool;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      // Only admins can create/update users (or users can create their initial profile if not admin)
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (isAdmin() || request.resource.data.isAdmin == false);
+      allow update: if isAdmin() && isValidUser(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /guides/{guideId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidGuide(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /protocols/{protocolId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidProtocol(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/admin {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidSettings(request.resource.data);
+      allow delete: if false; // Settings should not be deleted
+    }
+  }
+}

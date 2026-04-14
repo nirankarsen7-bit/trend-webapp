@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and subscription details",
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string", "description": "User's phone number or ID" },
+        "password": { "type": "string", "description": "User's password (hashed ideally, but currently plain text in old code)" },
+        "isAdmin": { "type": "boolean", "description": "Whether the user is an admin" },
+        "trialUsed": { "type": "boolean", "description": "Whether the user has used their trial" },
+        "subscriptionActive": { "type": "boolean", "description": "Whether the user has an active subscription" },
+        "expiryDate": { "type": "string", "format": "date-time", "description": "Subscription expiry date" }
+      },
+      "required": ["phone", "password", "isAdmin", "trialUsed", "subscriptionActive"]
+    },
+    "Guide": {
+      "title": "Guide",
+      "description": "Core execution guide",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["title", "content"]
+    },
+    "Protocol": {
+      "title": "Protocol",
+      "description": "Growth protocol",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["title", "content"]
+    },
+    "AdminSettings": {
+      "title": "AdminSettings",
+      "description": "Global admin settings",
+      "type": "object",
+      "properties": {
+        "subscriptionPrice": { "type": "number" },
+        "trialDays": { "type": "number" },
+        "isTrialEnabled": { "type": "boolean" }
+      },
+      "required": ["subscriptionPrice", "trialDays", "isTrialEnabled"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Users collection"
+    },
+    "/guides/{guideId}": {
+      "schema": { "$ref": "#/entities/Guide" },
+      "description": "Guides collection"
+    },
+    "/protocols/{protocolId}": {
+      "schema": { "$ref": "#/entities/Protocol" },
+      "description": "Protocols collection"
+    },
+    "/settings/admin": {
+      "schema": { "$ref": "#/entities/AdminSettings" },
+      "description": "Admin settings document"
+    }
+  }
+}
